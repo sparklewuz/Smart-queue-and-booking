@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>Smart Queue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #070b14;
+      --bg2: #0b1220;
+      --surface: #111827;
+      --surface2: #1a2332;
+      --surface3: #243044;
+      --border: rgba(148, 163, 184, 0.12);
+      --border-strong: rgba(148, 163, 184, 0.22);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --faint: #64748b;
+      --accent: #38bdf8;
+      --accent-dim: rgba(56, 189, 248, 0.15);
+      --green: #34d399;
+      --green-dim: rgba(52, 211, 153, 0.15);
+      --orange: #fb923c;
+      --orange-dim: rgba(251, 146, 60, 0.15);
+      --purple: #a78bfa;
+      --purple-dim: rgba(167, 139, 250, 0.15);
+      --red: #f87171;
+      --red-dim: rgba(248, 113, 113, 0.15);
+      --pink: #f472b6;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.35);
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(56, 189, 248, 0.12), transparent),
+        radial-gradient(ellipse 60% 40% at 90% 10%, rgba(167, 139, 250, 0.08), transparent),
+        radial-gradient(ellipse 50% 30% at 50% 100%, rgba(52, 211, 153, 0.06), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 16px 48px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 12px 0 20px;
+      margin-bottom: 8px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    .brand-mark::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.2));
+    }
+    .brand-text h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand-text span {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-dim);
+      color: var(--green);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+    .clock {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--surface);
+      padding: 5px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+    .tab {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 9px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: inherit;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .tab.active {
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(14, 165, 233, 0.3);
+    }
+
+    /* ── Views ── */
+    .view { display: none; animation: fadeIn 0.3s ease; }
+    .view.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Layout ── */
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 900px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .tabs { width: 100%; overflow-x: auto; }
+    }
+    @media (min-width: 901px) and (max-width: 1100px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    }
+    .card h2, .card h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .card-header h3 { margin: 0; }
+
+    /* ── Stats ── */
+    .stat-card {
+      text-align: center;
+      padding: 18px 12px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-strong);
+    }
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 10px;
+      font-size: 1rem;
+    }
+    .stat-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 500;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 11px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      min-height: 44px;
+      transition: all 0.2s;
+      box-shadow: 0 2px 10px rgba(14, 165, 233, 0.25);
+    }
+    .btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+    .btn-green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+    }
+    .btn-orange {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      box-shadow: 0 2px 10px rgba(249, 115, 22, 0.25);
+    }
+    .btn-purple {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      box-shadow: 0 2px 10px rgba(139, 92, 246, 0.25);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2);
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      box-shadow: none;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.05); border-color: var(--muted); }
+    .btn-block { width: 100%; }
+    .btn-sm {
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      border-radius: 9px;
+      min-height: 36px;
+      box-shadow: none;
+    }
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      min-height: 36px;
+      border-radius: 9px;
+    }
+
+    /* ── Forms ── */
+    label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 500;
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 5px;
+    }
+    label:first-of-type { margin-top: 0; }
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    input::placeholder { color: var(--faint); }
+    select option { background: var(--surface); }
+
+    /* ── Queue list ── */
+    .queue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .queue-list::-webkit-scrollbar { width: 5px; }
+    .queue-list::-webkit-scrollbar-track { background: transparent; }
+    .queue-list::-webkit-scrollbar-thumb {
+      background: var(--surface3);
+      border-radius: 4px;
+    }
+    .queue-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--surface2);
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      animation: slideIn 0.25s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .queue-item:hover { border-color: var(--border); }
+    .queue-item.you {
+      background: var(--accent-dim);
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+    .queue-item.serving {
+      background: var(--green-dim);
+      border-color: rgba(52, 211, 153, 0.35);
+    }
+    .queue-item .qi-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+    .qi-num {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--faint);
+      min-width: 28px;
+    }
+    .queue-item.serving .qi-num { color: var(--green); }
+    .qi-info { min-width: 0; }
+    .qi-info strong {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .qi-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .qi-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Badges ── */
+    .badge {
+      font-size: 0.68rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .badge-blue { background: var(--accent-dim); color: var(--accent); }
+    .badge-green { background: var(--green-dim); color: var(--green); }
+    .badge-orange { background: var(--orange-dim); color: var(--orange); }
+    .badge-purple { background: var(--purple-dim); color: var(--purple); }
+    .badge-red { background: var(--red-dim); color: var(--red); }
+    .badge-pink { background: rgba(244, 114, 182, 0.15); color: var(--pink); }
+
+    /* ── Phone mock ── */
+    .phone-shell {
+      max-width: 360px;
+      margin: 0 auto;
+      background: linear-gradient(160deg, #1e293b, #0f172a);
+      border-radius: 36px;
+      padding: 10px;
+      border: 2px solid #334155;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.05) inset,
+        0 25px 50px -12px rgba(0,0,0,0.5),
+        0 0 80px rgba(56, 189, 248, 0.08);
+    }
+    .phone-notch {
+      width: 110px;
+      height: 24px;
+      background: #070b14;
+      border-radius: 0 0 16px 16px;
+      margin: 0 auto 8px;
+      position: relative;
+    }
+    .phone-notch::after {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 4px;
+      background: #1e293b;
+      border-radius: 2px;
+    }
+    .phone-body {
+      background: var(--bg2);
+      border-radius: 28px;
+      padding: 20px 18px 24px;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+    }
+    .phone-biz {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    .phone-biz strong { color: var(--text); display: block; font-size: 0.95rem; margin-bottom: 2px; }
+    .pos-display {
+      text-align: center;
+      padding: 24px 0 20px;
+    }
+    .pos-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+    .pos-number {
+      font-size: 4.2rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      background: linear-gradient(135deg, #38bdf8, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 8px 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .pos-wait {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .pos-ahead {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .wait-bar-track {
+      height: 6px;
+      background: var(--surface3);
+      border-radius: 3px;
+      margin: 16px 0 8px;
+      overflow: hidden;
+    }
+    .wait-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #38bdf8, #34d399);
+      transition: width 0.5s ease;
+    }
+    .sms-card {
+      background: var(--green-dim);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 16px;
+      animation: smsPop 0.4s ease;
+    }
+    @keyframes smsPop {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .sms-card .sms-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 6px;
+    }
+    .sms-card p { font-size: 0.85rem; color: var(--text); line-height: 1.4; }
+    .ticket-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: 10px;
+    }
+
+    /* ── Chart ── */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 120px;
+      padding-top: 8px;
+    }
+    .bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .bar {
+      width: 100%;
+      border-radius: 6px 6px 2px 2px;
+      background: linear-gradient(180deg, #38bdf8, #0284c7);
+      min-height: 4px;
+      transition: height 0.4s ease;
+      position: relative;
+    }
+    .bar:hover { filter: brightness(1.15); }
+    .bar-val {
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .bar-lbl {
+      font-size: 0.65rem;
+      color: var(--faint);
+      font-weight: 500;
+    }
+
+    /* ── Toast ── */
+    .toast-wrap {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 90vw;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast.success { border-color: rgba(52, 211, 153, 0.4); }
+    .toast.error { border-color: rgba(248, 113, 113, 0.4); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 150;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--shadow);
+      transform: scale(0.95);
+      transition: transform 0.25s;
+    }
+    .modal-overlay.open .modal { transform: scale(1); }
+    .modal h3 { font-size: 1.15rem; margin-bottom: 8px; }
+    .modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--muted);
+    }
+    .empty-icon {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      opacity: 0.5;
+    }
+    .empty p { font-size: 0.88rem; }
+
+    /* ── Settings row ── */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-row label { margin: 0; color: var(--text); font-size: 0.9rem; }
+    .setting-row .hint { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── History ── */
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+    .history-item:last-child { border-bottom: none; }
+
+    /* ── Misc ── */
+    .muted { color: var(--muted); }
+    .faint { color: var(--faint); }
+    .mt { margin-top: 14px; }
+    .mb { margin-bottom: 12px; }
+    .center { text-align: center; }
+    .flex { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .hidden { display: none !important; }
+    .mono { font-family: var(--mono); }
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
+    .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .info-box {
+      background: var(--accent-dim);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .info-box strong { color: var(--accent); }
+    .formula {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      background: var(--bg2);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      text-align: center;
+      margin-top: 10px;
+      color: var(--accent);
+    }
+
+    /* ── Serving banner ── */
+    .serving-banner {
+      background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(16, 185, 129, 0.06));
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .serving-banner .who {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .serving-banner .svc {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Confetti canvas ── */
+    #confetti {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 300;
+    }
+
+    /* ── Responsive phone ── */
+    @media (max-width: 500px) {
+      .phone-shell { border-radius: 28px; }
+      .pos-number { font-size: 3.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="brand-mark">Q</div>
+        <div class="brand-text">
+          <h1>Smart Queue</h1>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="tabs">
+          <button class="tab" data-view="customer">Customer</button>
+          <button class="tab active" data-view="business">Dashboard</button>
+          <button class="tab" data-view="analytics">Analytics</button>
+          <button class="tab" data-view="settings">Settings</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ════ CUSTOMER VIEW ════ -->
+    <div id="customer" class="view">
+      <div class="grid grid-2">
+        <div>
+          <div class="phone-shell">
+            <div class="phone-notch"></div>
+            <div class="phone-body">
+              <div class="phone-biz">
+                <strong id="biz-name-display">Barbershop Windhoek Central</strong>
+                Independence Ave · Open now
+              </div>
+
+              <div class="pos-display">
+                <div class="pos-label">Your Position</div>
+                <div class="pos-number" id="cust-position">—</div>
+                <div class="pos-wait" id="cust-wait">Join the queue</div>
+                <div class="pos-ahead" id="cust-ahead"></div>
+                <div class="ticket-chip hidden" id="ticket-chip">
+                  <span>🎫</span> <span id="ticket-num">Q-000</span>
+                </div>
+              </div>
+
+              <div class="wait-bar-track">
+                <div class="wait-bar-fill" id="wait-bar" style="width:0%"></div>
+              </div>
+              <div class="center faint" style="font-size:0.72rem" id="wait-bar-label">Estimated progress</div>
+
+              <div class="sms-card hidden" id="sms-box">
+                <div class="sms-header">📱 SMS Alert</div>
+                <p id="sms-text"></p>
+              </div>
+
+              <div style="flex:1"></div>
+
+              <div class="mt">
+                <button class="btn btn-block" id="btn-join" onclick="joinQueue()">Join Queue Now</button>
+                <button class="btn btn-ghost btn-block mt hidden" id="btn-leave" onclick="leaveQueue()">Leave Queue</button>
+              </div>
+              <p class="center faint mt" style="font-size:0.72rem">SMS alerts work offline · No app needed</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card mb">
+            <h3>📅 Book Appointment</h3>
+            <label>Your Name</label>
+            <input type="text" id="book-name" placeholder="e.g. Maria S." value="Alex N." />
+            <label>Service</label>
+            <select id="book-service">
+              <option value="Haircut|15|80">Haircut — N$80 (≈15 min)</option>
+              <option value="Beard Trim|10|50">Beard Trim — N$50 (≈10 min)</option>
+              <option value="Full Package|30|150">Full Package — N$150 (≈30 min)</option>
+              <option value="Consultation|10|0">Consultation — Free (≈10 min)</option>
+            </select>
+            <label>Preferred Date & Time</label>
+            <input type="datetime-local" id="book-time" />
+            <button class="btn btn-green btn-block mt" onclick="bookAppointment()">
+              Confirm Booking → Join Live Queue
+            </button>
+            <p class="center muted mt" style="font-size:0.78rem">
+              Booking automatically places them in the live queue so staff can Serve Next.
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>How it works</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:0.88rem;color:var(--muted)">
+              <div class="flex"><span class="badge badge-blue">1</span> Book a slot or walk in and join the queue</div>
+              <div class="flex"><span class="badge badge-green">2</span> See live position & estimated wait in real time</div>
+              <div class="flex"><span class="badge badge-orange">3</span> Get SMS when you’re #1 or #2</div>
+              <div class="flex"><span class="badge badge-purple">4</span> Staff taps Serve Next — you’re done</div>
+            </div>
+            <div class="formula">Wait = People Ahead × Avg Service Time</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ BUSINESS DASHBOARD ════ -->
+    <div id="business" class="view active">
+      <div class="grid grid-4 mb" id="stats-row">
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--accent-dim);color:var(--accent)">👥</div>
+          <div class="stat-value" style="color:var(--accent)" id="stat-queue">0</div>
+          <div class="stat-label">In Queue</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--green-dim);color:var(--green)">📅</div>
+          <div class="stat-value" style="color:var(--green)" id="stat-bookings">0</div>
+          <div class="stat-label">Bookings</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--orange-dim);color:var(--orange)">⏱</div>
+          <div class="stat-value" style="color:var(--orange)" id="stat-avg">0m</div>
+          <div class="stat-label">Total Wait</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--purple-dim);color:var(--purple)">✅</div>
+          <div class="stat-value" style="color:var(--purple)" id="stat-served">0</div>
+          <div class="stat-label">Served Today</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3>🔴 Live Queue</h3>
+            <div class="flex">
+              <button class="btn btn-sm btn-green" onclick="serveNext()" id="btn-serve">Serve Next</button>
+              <button class="btn btn-sm btn-ghost" onclick="addDemoCustomer()">+ Walk-in</button>
+            </div>
+          </div>
+
+          <div id="serving-banner" class="serving-banner hidden">
+            <div>
+              <div class="svc">Now serving</div>
+              <div class="who" id="serving-name">—</div>
+            </div>
+            <button class="btn btn-sm btn-green" onclick="completeServing()">✓ Done</button>
+          </div>
+
+          <div class="queue-list" id="biz-queue-list"></div>
+        </div>
+
+        <div>
+          <div class="card mb">
+            <div class="card-header">
+              <h3>📊 Busy Hours</h3>
+              <span class="badge badge-blue" id="peak-label">Peak: —</span>
+            </div>
+            <div class="bar-chart" id="busy-chart"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>📋 Today’s Bookings</h3>
+              <button class="btn btn-sm btn-ghost" onclick="clearServedBookings()" title="Clear served">Clear served</button>
+            </div>
+            <p class="muted mb" style="font-size:0.78rem">
+              New bookings auto-join the live queue. Cancel removes them from both lists.
+            </p>
+            <div id="bookings-list" class="queue-list" style="max-height:260px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ ANALYTICS ════ -->
+    <div id="analytics" class="view">
+      <div class="grid grid-3 mb">
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--accent-dim);color:var(--accent)">📈</div>
+          <div class="stat-value" id="an-avg-wait">0m</div>
+          <div class="stat-label">Avg Wait / Person</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--green-dim);color:var(--green)">🎯</div>
+          <div class="stat-value" id="an-throughput">0</div>
+          <div class="stat-label">Served / Session</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--orange-dim);color:var(--orange)">⚡</div>
+          <div class="stat-value" id="an-efficiency">—</div>
+          <div class="stat-label">Queue Health</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>📜 Served History</h3>
+          <div id="history-list" style="max-height:320px;overflow-y:auto"></div>
+        </div>
+        <div class="card">
+          <h3>💡 Insights</h3>
+          <div id="insights" style="font-size:0.88rem;color:var(--muted);line-height:1.7"></div>
+          <div class="divider"></div>
+          <h3>Service Mix (Today)</h3>
+          <div id="service-mix" class="mt"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ SETTINGS ════ -->
+    <div id="settings" class="view">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>⚙️ Queue Settings</h3>
+          <div class="setting-row">
+            <div>
+              <label>Business Name</label>
+              <div class="hint">Shown on customer phone view</div>
+            </div>
+            <input type="text" id="set-biz-name" style="width:180px" value="Barbershop Windhoek Central" onchange="updateBizName()" />
+          </div>
+          <div class="setting-row">
+            <div>
+              <label>Avg Service Time</label>
+              <div class="hint">Minutes per customer (default)</div>
+            </div>
+            <input type="number" id="set-avg-time" style="width:80px" min="5" max="60" value="12" onchange="updateAvgTime()" />
+          </div>
+          <div class="setting-row">
+            <div>
+              <label>SMS Alerts</label>
+              <div class="hint">Notify at position #1 and #2</div>
+            </div>
+            <input type="checkbox" id="set-sms" checked onchange="state.smsEnabled=this.checked;save()" style="width:auto;accent-color:var(--accent)" />
+          </div>
+          <div class="setting-row">
+            <div>
+              <label>Sound on Serve</label>
+              <div class="hint">Play a short chime when serving</div>
+            </div>
+            <input type="checkbox" id="set-sound" checked onchange="state.soundEnabled=this.checked;save()" style="width:auto;accent-color:var(--accent)" />
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🛠 Demo Controls</h3>
+          <p class="muted mb" style="font-size:0.85rem">Reset or seed the prototype for presentations.</p>
+          <div class="flex" style="flex-direction:column;align-items:stretch;gap:10px">
+            <button class="btn btn-ghost" onclick="seedDemo()">Seed Demo Data (5 in queue + 2 bookings)</button>
+            <button class="btn btn-orange" onclick="resetAll()">Reset All Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toast-wrap"></div>
+
+  <!-- Confirm modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h3 id="modal-title">Confirm</h3>
+      <p id="modal-msg">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="modal-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ═══════════════════════════════════════════
+       Smart Queue Prototype — Enhanced v2
+       ═══════════════════════════════════════════ */
+    const STORAGE_KEY = 'smartQueueProto_v2';
+    let AVG_SERVICE_MIN = 12;
+    let ticketCounter = 1;
+
+    let state = {
+      queue: [],
+      bookings: [],
+      history: [],
+      serving: null,
+      served: 0,
+      myId: null,
+      busyHours: [2, 4, 7, 11, 14, 9, 6, 3],
+      bizName: 'Barbershop Windhoek Central',
+      smsEnabled: true,
+      soundEnabled: true,
+      serviceCounts: {}
+    };
+
+    /* ── Persistence ── */
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          state = { ...state, ...saved };
+          AVG_SERVICE_MIN = saved.avgService || 12;
+          ticketCounter = saved.ticketCounter || 1;
+        }
+      } catch (e) {}
+    }
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        ...state,
+        avgService: AVG_SERVICE_MIN,
+        ticketCounter
+      }));
+    }
+
+    /* ── Helpers ── */
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    }
+    function nextTicket() {
+      const n = ticketCounter++;
+      return 'Q-' + String(n).padStart(3, '0');
+    }
+    function toast(msg, type = 'success') {
+      const wrap = document.getElementById('toast-wrap');
+      const t = document.createElement('div');
+      t.className = 'toast ' + type;
+      t.innerHTML = (type === 'success' ? '✓ ' : type === 'error' ? '✕ ' : '') + msg;
+      wrap.appendChild(t);
+      requestAnimationFrame(() => t.classList.add('show'));
+      setTimeout(() => {
+        t.classList.remove('show');
+        setTimeout(() => t.remove(), 300);
+      }, 2800);
+    }
+    function showView(id) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === id));
+      document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === id));
+    }
+    function relativeTime(ts) {
+      const diff = Math.floor((Date.now() - ts) / 60000);
+      if (diff < 1) return 'just now';
+      if (diff === 1) return '1 min ago';
+      if (diff < 60) return diff + ' min ago';
+      return Math.floor(diff / 60) + 'h ago';
+    }
+    function parseService(val) {
+      const parts = val.split('|');
+      return { name: parts[0], mins: parseInt(parts[1]) || 15, price: parseInt(parts[2]) || 0 };
+    }
+    function playChime() {
+      if (!state.soundEnabled) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.frequency.value = 880;
+        g.gain.value = 0.08;
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        o.stop(ctx.currentTime + 0.4);
+      } catch (e) {}
+    }
+
+    /* ── Modal ── */
+    let modalCallback = null;
+    function openModal(title, msg, onConfirm) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-msg').textContent = msg;
+      modalCallback = onConfirm;
+      document.getElementById('modal').classList.add('open');
+      document.getElementById('modal-confirm').onclick = () => {
+        const onConfirm = modalCallback;
+        closeModal();
+        if (onConfirm) onConfirm();
+      };
+    }
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+      modalCallback = null;
+    }
+    document.getElementById('modal').addEventListener('click', e => {
+      if (e.target.id === 'modal') closeModal();
+    });
+
+    /* ── Core actions ── */
+    function joinQueue() {
+      if (state.myId) return;
+      const nameInput = document.getElementById('book-name').value.trim();
+      const name = prompt('Your name?', nameInput || 'Guest') || 'Guest';
+      const id = uid();
+      const ticket = nextTicket();
+      state.queue.push({
+        id, name, service: 'Walk-in', joinedAt: Date.now(), ticket, mins: AVG_SERVICE_MIN
+      });
+      state.myId = id;
+      save();
+      render();
+      toast('Joined queue as ' + ticket);
+    }
+
+    function leaveQueue() {
+      if (!state.myId) return;
+      openModal('Leave Queue?', 'You will lose your place in line.', () => {
+        state.queue = state.queue.filter(c => c.id !== state.myId);
+        state.myId = null;
+        save();
+        render();
+        toast('You left the queue', 'error');
+      });
+    }
+
+    function bookAppointment() {
+      const name = document.getElementById('book-name').value.trim() || 'Guest';
+      const svcRaw = document.getElementById('book-service').value;
+      const svc = parseService(svcRaw);
+      const time = document.getElementById('book-time').value;
+      if (!time) {
+        toast('Please choose a date & time', 'error');
+        return;
+      }
+      const bookingId = uid();
+      const ticket = nextTicket();
+      const personId = uid();
+
+      state.bookings.push({
+        id: bookingId, name, service: svc.name, time,
+        status: 'in-queue', mins: svc.mins, price: svc.price, ticket
+      });
+      state.queue.push({
+        id: personId, name, service: svc.name, joinedAt: Date.now(),
+        bookingId, ticket, mins: svc.mins
+      });
+      state.serviceCounts[svc.name] = (state.serviceCounts[svc.name] || 0) + 1;
+      save();
+      render();
+      toast(name + ' booked · ' + ticket + ' added to live queue');
+      showView('business');
+    }
+
+    function serveNext() {
+      if (state.serving) {
+        toast('Finish current customer first', 'error');
+        return;
+      }
+      if (state.queue.length === 0) {
+        toast('Queue is empty', 'error');
+        return;
+      }
+      const next = state.queue.shift();
+      state.serving = next;
+      if (state.myId === next.id) state.myId = null;
+      playChime();
+      save();
+      render();
+      toast('Now serving: ' + next.name + (next.ticket ? ' (' + next.ticket + ')' : ''));
+    }
+
+    function completeServing() {
+      if (!state.serving) return;
+      const person = state.serving;
+      state.served += 1;
+      state.history.unshift({
+        name: person.name,
+        service: person.service,
+        ticket: person.ticket,
+        at: Date.now()
+      });
+      if (state.history.length > 50) state.history = state.history.slice(0, 50);
+      if (person.bookingId) {
+        state.bookings = state.bookings.map(b =>
+          b.id === person.bookingId ? { ...b, status: 'served' } : b
+        );
+      }
+      const hour = new Date().getHours();
+      const idx = Math.min(7, Math.max(0, hour - 9));
+      state.busyHours[idx] = (state.busyHours[idx] || 0) + 1;
+      state.serving = null;
+      save();
+      render();
+      toast('Completed: ' + person.name);
+      fireConfetti();
+    }
+
+    function addDemoCustomer() {
+      const names = ['Maria S.', 'John K.', 'Anna M.', 'Peter N.', 'Thabo D.', 'Lisa R.', 'David O.', 'Grace H.', 'Sam T.'];
+      const services = [
+        { name: 'Haircut', mins: 15 },
+        { name: 'Beard Trim', mins: 10 },
+        { name: 'Full Package', mins: 30 },
+        { name: 'Walk-in', mins: AVG_SERVICE_MIN }
+      ];
+      const name = names[Math.floor(Math.random() * names.length)];
+      const svc = services[Math.floor(Math.random() * services.length)];
+      const ticket = nextTicket();
+      state.queue.push({
+        id: uid(), name, service: svc.name, joinedAt: Date.now(), ticket, mins: svc.mins
+      });
+      state.serviceCounts[svc.name] = (state.serviceCounts[svc.name] || 0) + 1;
+      save();
+      render();
+      toast('Walk-in: ' + name + ' · ' + ticket);
+    }
+
+    function addBookingToQueue(id) {
+      const booking = state.bookings.find(b => b.id === id);
+      if (!booking || booking.status !== 'upcoming') return;
+      if (state.queue.some(q => q.bookingId === booking.id)) return;
+      state.queue.push({
+        id: uid(),
+        name: booking.name,
+        service: booking.service,
+        joinedAt: Date.now(),
+        bookingId: booking.id,
+        ticket: booking.ticket || nextTicket(),
+        mins: booking.mins || AVG_SERVICE_MIN
+      });
+      booking.status = 'in-queue';
+      save();
+      render();
+      toast(booking.name + ' checked in');
+    }
+
+    function cancelBooking(id) {
+      const booking = state.bookings.find(b => b.id === id);
+      if (!booking) return;
+      openModal('Cancel Booking?', 'Cancel ' + booking.name + '\'s booking? They will be removed from the queue.', () => {
+        state.bookings = state.bookings.filter(b => b.id !== id);
+        state.queue = state.queue.filter(q => q.bookingId !== id);
+        if (state.serving && state.serving.bookingId === id) state.serving = null;
+        save();
+        render();
+        toast('Cancelled: ' + booking.name, 'error');
+      });
+    }
+
+    function clearServedBookings() {
+      const before = state.bookings.length;
+      state.bookings = state.bookings.filter(b => b.status !== 'served');
+      save();
+      render();
+      toast('Cleared ' + (before - state.bookings.length) + ' served booking(s)');
+    }
+
+    function updateBizName() {
+      state.bizName = document.getElementById('set-biz-name').value || 'Business';
+      save();
+      render();
+    }
+    function updateAvgTime() {
+      const v = parseInt(document.getElementById('set-avg-time').value) || 12;
+      AVG_SERVICE_MIN = Math.max(5, Math.min(60, v));
+      document.getElementById('set-avg-time').value = AVG_SERVICE_MIN;
+      save();
+      render();
+      toast('Avg service time → ' + AVG_SERVICE_MIN + ' min');
+    }
+
+    function seedDemo() {
+      state.queue = [];
+      state.bookings = [];
+      state.history = [];
+      state.serving = null;
+      state.served = 0;
+      state.myId = null;
+      state.serviceCounts = {};
+      const people = [
+        { name: 'Maria S.', service: 'Haircut', mins: 15 },
+        { name: 'John K.', service: 'Beard Trim', mins: 10 },
+        { name: 'Anna M.', service: 'Full Package', mins: 30 },
+        { name: 'Peter N.', service: 'Walk-in', mins: 12 },
+        { name: 'Thabo D.', service: 'Haircut', mins: 15 }
+      ];
+      people.forEach(p => {
+        const ticket = nextTicket();
+        state.queue.push({ id: uid(), ...p, joinedAt: Date.now() - Math.random() * 600000, ticket });
+        state.serviceCounts[p.service] = (state.serviceCounts[p.service] || 0) + 1;
+      });
+      const t1 = new Date(Date.now() + 3600000);
+      const t2 = new Date(Date.now() + 7200000);
+      state.bookings.push({
+        id: uid(), name: 'Lisa R.', service: 'Haircut', time: t1.toISOString().slice(0, 16),
+        status: 'in-queue', mins: 15, ticket: nextTicket()
+      });
+      state.queue.push({
+        id: uid(), name: 'Lisa R.', service: 'Haircut', joinedAt: Date.now(),
+        bookingId: state.bookings[0].id, ticket: state.bookings[0].ticket, mins: 15
+      });
+      state.bookings.push({
+        id: uid(), name: 'David O.', service: 'Consultation', time: t2.toISOString().slice(0, 16),
+        status: 'upcoming', mins: 10, ticket: nextTicket()
+      });
+      state.busyHours = [3, 5, 8, 12, 15, 10, 7, 4];
+      save();
+      render();
+      toast('Demo data loaded');
+    }
+
+    function resetAll() {
+      openModal('Reset Everything?', 'This clears queue, bookings, history, and stats. Cannot be undone.', () => {
+        state = {
+          queue: [], bookings: [], history: [], serving: null, served: 0,
+          myId: null, busyHours: [0, 0, 0, 0, 0, 0, 0, 0],
+          bizName: state.bizName, smsEnabled: true, soundEnabled: true, serviceCounts: {}
+        };
+        ticketCounter = 1;
+        save();
+        render();
+        toast('All data reset');
+      });
+    }
+
+    /* ── Confetti ── */
+    function fireConfetti() {
+      const canvas = document.getElementById('confetti');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const particles = [];
+      const colors = ['#38bdf8', '#34d399', '#a78bfa', '#fb923c', '#f472b6'];
+      for (let i = 0; i < 60; i++) {
+        particles.push({
+          x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+          y: canvas.height / 2,
+          vx: (Math.random() - 0.5) * 12,
+          vy: -Math.random() * 10 - 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: Math.random() * 6 + 3,
+          life: 1
+        });
+      }
+      let frame = 0;
+      function anim() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.25;
+          p.life -= 0.015;
+          ctx.globalAlpha = Math.max(0, p.life);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.size, p.size);
+        });
+        frame++;
+        if (frame < 80) requestAnimationFrame(anim);
+        else ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      anim();
+    }
+
+    /* ── Render ── */
+    function render() {
+      document.getElementById('biz-name-display').textContent = state.bizName;
+
+      /* Customer position */
+      const posEl = document.getElementById('cust-position');
+      const waitEl = document.getElementById('cust-wait');
+      const aheadEl = document.getElementById('cust-ahead');
+      const btnJoin = document.getElementById('btn-join');
+      const btnLeave = document.getElementById('btn-leave');
+      const smsBox = document.getElementById('sms-box');
+      const smsText = document.getElementById('sms-text');
+      const ticketChip = document.getElementById('ticket-chip');
+      const ticketNum = document.getElementById('ticket-num');
+      const waitBar = document.getElementById('wait-bar');
+      const waitBarLabel = document.getElementById('wait-bar-label');
+
+      if (state.myId) {
+        const idx = state.queue.findIndex(c => c.id === state.myId);
+        if (idx === -1) {
+          if (state.serving && state.serving.id === state.myId) {
+            posEl.textContent = '★';
+            waitEl.textContent = 'You are being served!';
+            aheadEl.textContent = 'Please proceed to the counter';
+            waitBar.style.width = '100%';
+            waitBarLabel.textContent = 'Your turn';
+            ticketChip.classList.remove('hidden');
+            ticketNum.textContent = state.serving.ticket || '';
+          } else {
+            state.myId = null;
+            save();
+            posEl.textContent = '—';
+            waitEl.textContent = 'You were served';
+            aheadEl.textContent = 'Thanks for visiting!';
+            waitBar.style.width = '0%';
+            waitBarLabel.textContent = 'Estimated progress';
+            ticketChip.classList.add('hidden');
+          }
+          btnJoin.classList.add('hidden');
+          btnLeave.classList.add('hidden');
+          smsBox.classList.add('hidden');
+        } else {
+          const pos = idx + 1;
+          const ahead = idx;
+          const waitMin = state.queue.slice(0, idx).reduce((s, c) => s + (c.mins || AVG_SERVICE_MIN), 0);
+          posEl.textContent = '#' + pos;
+          waitEl.textContent = waitMin === 0 ? 'You are next!' : 'Est. wait: ' + waitMin + ' min';
+          aheadEl.textContent = ahead === 0 ? 'Please get ready' : ahead + ' people ahead of you';
+          btnJoin.classList.add('hidden');
+          btnLeave.classList.remove('hidden');
+          const me = state.queue[idx];
+          if (me && me.ticket) {
+            ticketChip.classList.remove('hidden');
+            ticketNum.textContent = me.ticket;
+          }
+          const totalQ = state.queue.length;
+          const progress = totalQ > 0 ? Math.round(((totalQ - ahead) / totalQ) * 100) : 0;
+          waitBar.style.width = Math.max(8, progress) + '%';
+          waitBarLabel.textContent = progress + '% through the queue';
+
+          if (state.smsEnabled && pos <= 2) {
+            smsBox.classList.remove('hidden');
+            smsText.textContent = pos === 1
+              ? 'Hi! You are next at ' + state.bizName + '. Please come to the counter.'
+              : 'Almost your turn! You are #' + pos + '. Est. wait ~' + waitMin + ' min.';
+          } else {
+            smsBox.classList.add('hidden');
+          }
+        }
+      } else {
+        posEl.textContent = '—';
+        waitEl.textContent = 'Join the queue';
+        const qLen = state.queue.length + (state.serving ? 1 : 0);
+        aheadEl.textContent = qLen
+          ? 'Currently ' + qLen + ' people waiting'
+          : 'No one waiting — walk right in!';
+        btnJoin.classList.remove('hidden');
+        btnLeave.classList.add('hidden');
+        smsBox.classList.add('hidden');
+        ticketChip.classList.add('hidden');
+        waitBar.style.width = '0%';
+        waitBarLabel.textContent = 'Estimated progress';
+      }
+
+      /* Stats */
+      document.getElementById('stat-queue').textContent = state.queue.length + (state.serving ? 1 : 0);
+      document.getElementById('stat-bookings').textContent = state.bookings.filter(b => b.status !== 'served').length;
+      document.getElementById('stat-served').textContent = state.served;
+      const totalWait = state.queue.reduce((s, c) => s + (c.mins || AVG_SERVICE_MIN), 0);
+      document.getElementById('stat-avg').textContent = totalWait + 'm';
+
+      /* Serving banner */
+      const banner = document.getElementById('serving-banner');
+      if (state.serving) {
+        banner.classList.remove('hidden');
+        document.getElementById('serving-name').textContent =
+          state.serving.name + (state.serving.ticket ? ' · ' + state.serving.ticket : '');
+        document.getElementById('btn-serve').disabled = true;
+      } else {
+        banner.classList.add('hidden');
+        document.getElementById('btn-serve').disabled = false;
+      }
+
+      /* Queue list */
+      const list = document.getElementById('biz-queue-list');
+      if (state.queue.length === 0 && !state.serving) {
+        list.innerHTML = '<div class="empty"><div class="empty-icon">🛋️</div><p>Queue is empty<br><span class="faint">Add a walk-in or wait for bookings</span></p></div>';
+      } else {
+        list.innerHTML = state.queue.map((c, i) => {
+          const isYou = c.id === state.myId;
+          const isFirst = i === 0 && !state.serving;
+          return `<div class="queue-item ${isYou ? 'you' : ''} ${isFirst ? 'serving' : ''}">
+            <div class="qi-left">
+              <span class="qi-num">#${i + 1}</span>
+              <div class="qi-info">
+                <strong>${esc(c.name)}</strong>
+                <div class="qi-meta">
+                  <span>${esc(c.service)}</span>
+                  <span>· ${c.mins || AVG_SERVICE_MIN} min</span>
+                  <span>· ${relativeTime(c.joinedAt)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="qi-right">
+              ${c.ticket ? `<span class="badge badge-purple">${esc(c.ticket)}</span>` : ''}
+              ${c.bookingId ? '<span class="badge badge-orange">Booked</span>' : '<span class="badge badge-blue">Walk-in</span>'}
+              ${isFirst ? '<span class="badge badge-green">Next</span>' : ''}
+              ${isYou ? '<span class="badge badge-blue">You</span>' : ''}
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      /* Bookings */
+      const bList = document.getElementById('bookings-list');
+      if (state.bookings.length === 0) {
+        bList.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><p>No bookings yet</p></div>';
+      } else {
+        bList.innerHTML = state.bookings.slice().reverse().map(b => {
+          const when = new Date(b.time);
+          const whenText = isNaN(when.getTime()) ? b.time : when.toLocaleString([], {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+          let statusBadge = '';
+          let actions = '';
+          if (b.status === 'upcoming') {
+            statusBadge = '<span class="badge badge-blue">Upcoming</span>';
+            actions = `<button class="btn btn-sm btn-green" onclick="addBookingToQueue('${b.id}')">Check in</button>`;
+          } else if (b.status === 'in-queue') {
+            statusBadge = '<span class="badge badge-orange">In queue</span>';
+          } else if (b.status === 'served') {
+            statusBadge = '<span class="badge badge-green">Served</span>';
+          }
+          const cancel = b.status !== 'served'
+            ? `<button class="btn btn-sm btn-danger" onclick="cancelBooking('${b.id}')">Cancel</button>`
+            : '';
+          return `<div class="queue-item">
+            <div class="qi-left">
+              <div class="qi-info">
+                <strong>${esc(b.name)}</strong>
+                <div class="qi-meta">
+                  <span>${esc(b.service)}</span>
+                  <span>· ${whenText}</span>
+                  ${b.ticket ? '<span>· ' + esc(b.ticket) + '</span>' : ''}
+                </div>
+              </div>
+            </div>
+            <div class="qi-right">${statusBadge}${actions}${cancel}</div>
+          </div>`;
+        }).join('');
+      }
+
+      /* Busy chart */
+      const chart = document.getElementById('busy-chart');
+      const hours = ['9am', '10', '11', '12', '1pm', '2', '3', '4'];
+      const maxH = Math.max(...state.busyHours, 1);
+      let peakIdx = 0;
+      state.busyHours.forEach((h, i) => { if (h > state.busyHours[peakIdx]) peakIdx = i; });
+      document.getElementById('peak-label').textContent = 'Peak: ' + hours[peakIdx];
+      chart.innerHTML = state.busyHours.map((h, i) => {
+        const pct = Math.round((h / maxH) * 100);
+        return `<div class="bar-col">
+          <span class="bar-val">${h || ''}</span>
+          <div class="bar" style="height:${Math.max(4, pct)}%"></div>
+          <span class="bar-lbl">${hours[i]}</span>
+        </div>`;
+      }).join('');
+
+      /* Analytics */
+      const avgWait = state.served > 0
+        ? Math.round(state.history.length ? AVG_SERVICE_MIN : AVG_SERVICE_MIN)
+        : AVG_SERVICE_MIN;
+      document.getElementById('an-avg-wait').textContent = avgWait + 'm';
+      document.getElementById('an-throughput').textContent = state.served;
+      const qLen = state.queue.length;
+      let health = 'Good';
+      let healthColor = 'var(--green)';
+      if (qLen > 8) { health = 'Busy'; healthColor = 'var(--orange)'; }
+      if (qLen > 15) { health = 'Critical'; healthColor = 'var(--red)'; }
+      if (qLen === 0) { health = 'Idle'; healthColor = 'var(--muted)'; }
+      const effEl = document.getElementById('an-efficiency');
+      effEl.textContent = health;
+      effEl.style.color = healthColor;
+
+      const histList = document.getElementById('history-list');
+      if (state.history.length === 0) {
+        histList.innerHTML = '<div class="empty"><p>No customers served yet</p></div>';
+      } else {
+        histList.innerHTML = state.history.map(h => `
+          <div class="history-item">
+            <div>
+              <strong>${esc(h.name)}</strong>
+              <span class="muted" style="font-size:0.78rem"> · ${esc(h.service)}</span>
+            </div>
+            <div class="flex">
+              ${h.ticket ? `<span class="badge badge-purple">${esc(h.ticket)}</span>` : ''}
+              <span class="faint" style="font-size:0.75rem">${relativeTime(h.at)}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      /* Insights */
+      const insights = document.getElementById('insights');
+      const tips = [];
+      if (qLen === 0) tips.push('Queue is clear — great time for walk-ins or a short break.');
+      else if (qLen <= 3) tips.push('Queue is light. Estimated clear time: ~' + (qLen * AVG_SERVICE_MIN) + ' min.');
+      else if (qLen > 8) tips.push('Long queue detected. SMS alerts will help customers plan arrival.');
+      if (state.served > 5) tips.push('Strong throughput today — ' + state.served + ' customers served.');
+      if (state.bookings.filter(b => b.status === 'in-queue' || b.status === 'upcoming').length > 3)
+        tips.push('Several bookings pending — keep Serve Next flowing.');
+      tips.push('Formula in use: Wait = Σ(service times ahead).');
+      insights.innerHTML = tips.map(t => '<div style="margin-bottom:6px">→ ' + t + '</div>').join('');
+
+      /* Service mix */
+      const mix = document.getElementById('service-mix');
+      const entries = Object.entries(state.serviceCounts);
+      if (entries.length === 0) {
+        mix.innerHTML = '<span class="muted">No data yet</span>';
+      } else {
+        const total = entries.reduce((s, [, v]) => s + v, 0);
+        mix.innerHTML = entries.map(([name, count]) => {
+          const pct = Math.round((count / total) * 100);
+          return `<div style="margin-bottom:8px">
+            <div class="flex-between" style="font-size:0.82rem;margin-bottom:3px">
+              <span>${esc(name)}</span><span class="muted">${count} (${pct}%)</span>
+            </div>
+            <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#38bdf8,#6366f1);border-radius:3px"></div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      /* Settings sync */
+      document.getElementById('set-biz-name').value = state.bizName;
+      document.getElementById('set-avg-time').value = AVG_SERVICE_MIN;
+      document.getElementById('set-sms').checked = state.smsEnabled;
+      document.getElementById('set-sound').checked = state.soundEnabled;
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    /* ── Init ── */
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => showView(tab.dataset.view));
+    });
+
+    load();
+    if (state.queue.length === 0 && state.served === 0 && state.bookings.length === 0) {
+      seedDemo();
+    } else {
+      render();
+    }
+
+    const dt = new Date(Date.now() + 2 * 3600000);
+    dt.setMinutes(0, 0, 0);
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('book-time').value =
+      dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()) +
+      'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+
+    setInterval(() => { if (document.getElementById('business').classList.contains('active')) render(); }, 30000);
+  </script>
+</body>
+</html>
